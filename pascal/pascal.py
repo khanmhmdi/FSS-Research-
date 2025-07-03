@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 # --- Configuration Defaults (Adapt from your main script) ---
 # MODIFIED: Default path for PASCAL VOC dataset
-DEFAULT_PASCAL_PATH = r'/data/pascal/raw'  # Example path, adjust as needed
+DEFAULT_PASCAL_PATH = r'../data/pascal/raw'  # Example path, adjust as needed
 DEFAULT_SAM_CHECKPOINT = r'C:\Users\Khan\PycharmProjects\FSS-Research-\model\sam_vit_h_4b8939.pth' # Keep your checkpoint path
 DEFAULT_MODEL_TYPE = "vit_h"
 DEFAULT_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
