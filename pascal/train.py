@@ -37,6 +37,8 @@ from sklearn.neighbors import kneighbors_graph
 import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
+import matplotlib
+matplotlib.use('TkAgg')  # or 'Qt5Agg'
 
 # --- PASCAL-5i Dataset (Provided by User) ---
 import torch.nn.functional as F  # Required by DatasetPASCAL
@@ -1212,6 +1214,7 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
 
     pbar = tqdm(train_loader, desc=f"Epoch {args.current_epoch}/{args.epochs} Training", leave=False, mininterval=1.0)
     batch_num = 0
+
     for batch_items in pbar:
         batch_num += 1
         if batch_items is None:
@@ -1239,7 +1242,65 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
                 query_idx,
                 precomputed_graph_dir=args.precomputed_graph_path
             )
+            # In your main script, before the training loop
+            import matplotlib.pyplot as plt
+            def debug_visualize_sample(support_set, query_set, graph_data):
+                fig, axs = plt.subplots(2, args.k_shot + 1, figsize=(15, 6))
 
+                # Query
+                q_img_np = (query_set['image_resnet'].cpu().numpy().transpose(1, 2, 0) * [0.229, 0.224, 0.225] + [0.485,
+                                                                                                                  0.456,
+                                                                                                                  0.406])  # Denormalize
+                q_img_np = np.clip(q_img_np, 0, 1)
+                q_mask_np = query_set['gt_mask_np']
+
+                axs[0, 0].imshow(q_img_np)
+                axs[0, 0].set_title(f"Q: {query_set['class']}")
+                axs[0, 0].axis('off')
+
+                axs[1, 0].imshow(q_mask_np, cmap='gray')
+                axs[1, 0].set_title(f"Q GT Mask")
+                axs[1, 0].axis('off')
+
+                # Supports
+                for i, s_item in enumerate(support_set):
+                    if i >= args.k_shot: break  # Only show K
+                    s_img_np = (s_item['image'].cpu().numpy().transpose(1, 2, 0) * [0.229, 0.224, 0.225] + [0.485,
+                                                                                                            0.456,
+                                                                                                            0.406])
+                    s_img_np = np.clip(s_img_np, 0, 1)
+                    s_mask_np = s_item['mask'].squeeze().cpu().numpy()
+
+                    axs[0, i + 1].imshow(s_img_np)
+                    axs[0, i + 1].set_title(f"S{i + 1}")
+                    axs[0, i + 1].axis('off')
+
+                    axs[1, i + 1].imshow(s_mask_np, cmap='gray')
+                    axs[1, i + 1].set_title(f"S{i + 1} Mask")
+                    axs[1, i + 1].axis('off')
+
+                plt.tight_layout()
+                plt.suptitle(f"Sample: {query_set['query_index']}, Class: {query_set['class']}")
+                plt.show()
+
+                # Optionally visualize some candidate masks and oracle labels from graph_data
+                if graph_data and graph_data.num_nodes > 0:
+                    fig_nodes, axs_nodes = plt.subplots(1, min(20, graph_data.num_nodes), figsize=(12, 3))
+                    if min(5, graph_data.num_nodes) == 1: axs_nodes = [axs_nodes]
+
+                    for i in range(min(20, graph_data.num_nodes)):
+                        mask = graph_data.node_masks_np[i]
+                        label = graph_data.y[i].item()
+                        axs_nodes[i].imshow(mask, cmap='gray')
+                        axs_nodes[i].set_title(f"Node {i}\nLabel: {int(label)}")
+                        axs_nodes[i].axis('off')
+                    plt.suptitle(f"Query {query_set['query_index']} Candidate Masks & Oracle Labels")
+                    plt.show()
+
+            # Call this in train_gnn and evaluate_gnn (e.g., for the first batch, or randomly)
+            # Example in train_gnn loop:
+            # if batch_num == 1 and args.current_epoch == 1: # Only for first batch of first epoch
+            debug_visualize_sample(support_set, query_set, graph_data)
             if graph_data is not None and graph_data.num_nodes > 0:
                 if not hasattr(graph_data, 'x_base') or not hasattr(graph_data, 'y') or \
                         graph_data.x_base.shape[0] != graph_data.num_nodes or \
@@ -1830,6 +1891,7 @@ def main(args):
     except Exception as e:
         logger.error(f"Failed to create output dir/save config: {e}")
 
+
     if args.mode == 'train':
         logger.info(f"======== Starting Training (Epochs: {args.epochs}) ========")
         best_eval_iou = -1.0
@@ -1980,7 +2042,7 @@ def main(args):
 
 if __name__ == "__main__":
     args = SimpleNamespace(
-        mode='precompute_graphs',
+        mode='train',
 
         # PASCAL Paths & Settings (NEW)
         pascal_datapath=DEFAULT_PASCAL_DATAPATH,  # Path to VOCdevkit folder or similar structure
@@ -1990,7 +2052,7 @@ if __name__ == "__main__":
         # fss_path=DEFAULT_FSS_PATH, # OLD, deprecated
         precomputed_mask_path=DEFAULT_PRECOMPUTED_MASK_PATH,
         precomputed_graph_path=DEFAULT_PRECOMPUTED_GRAPH_PATH,
-        output_dir="./scr_gt_pascal_output_precomp",  # Output for PASCAL runs
+        output_dir="./train_model_outputs",  # Output for PASCAL runs
         eval_model_path="",  # Path to model for 'eval' mode
 
         # General settings
@@ -2031,7 +2093,7 @@ if __name__ == "__main__":
 
         # Loss Weighting
         use_loss_weighting=True,
-        pos_weight_value=None,
+        pos_weight_value=8,
         estimate_weight_subset=0.9,  # Use 25% of PASCAL train split of the fold for estimation
 
         # Saving and Logging
