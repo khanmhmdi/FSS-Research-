@@ -32,7 +32,7 @@ DEFAULT_PASCAL_PATH = r'../data/pascal/raw'  # Example path, adjust as needed
 DEFAULT_SAM_CHECKPOINT = r'C:\Users\Khan\PycharmProjects\FSS-Research-\model\sam_vit_h_4b8939.pth' # Keep your checkpoint path
 DEFAULT_MODEL_TYPE = "vit_h"
 DEFAULT_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
-DEFAULT_IMG_SIZE = 256
+DEFAULT_IMG_SIZE = 512
 # MODIFIED: Output directory name for clarity
 DEFAULT_OUTPUT_DIR = 'pascal_sam_precomputed_masks_hybrid'  # Directory to save masks
 DEFAULT_MIN_GAP_AREA = 2000 # Minimum number of contiguous uncovered pixels to prompt

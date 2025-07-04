@@ -331,7 +331,10 @@ class PASCALAdapterDataset(Dataset):
 # DEFAULT_FSS_PATH = '/home/farahani/khan/fewshot_data/fewshot_data' # Old
 DEFAULT_PASCAL_DATAPATH = r"C:\Users\Khan\PycharmProjects\FSS-Research-\data\pascal\raw"  # NEW: Root for VOC2012, SegmentationClassAug, splits
 DEFAULT_PRECOMPUTED_MASK_PATH = r'C:\Users\Khan\Desktop\New folder (2)\sam_precomputed_masks_hybrid\pascal_voc2012_sam_masks'  # NEW: Consider separate SAM masks for PASCAL
-DEFAULT_PRECOMPUTED_GRAPH_PATH = './precomputed_pascal_graphs_hybrid_v1_main'  # NEW: Path for precomputed PASCAL graphs
+# DEFAULT_PRECOMPUTED_MASK_PATH = r'C:\Users\Khan\PycharmProjects\FSS-Research-\pascal\pascal_sam_precomputed_masks_hybrid\JPEGImages'  # NEW: Consider separate SAM masks for PASCAL
+
+# DEFAULT_PRECOMPUTED_GRAPH_PATH = './precomputed_pascal_graphs_hybrid_v1_main_512'
+DEFAULT_PRECOMPUTED_GRAPH_PATH = './precomputed_pascal_graphs_hybrid_v1_main'
 DEFAULT_DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 DEFAULT_K_SHOT = 1
 DEFAULT_IMG_SIZE = 256  # This will be used for PASCAL image/mask resizing

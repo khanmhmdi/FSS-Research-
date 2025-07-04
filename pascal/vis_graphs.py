@@ -222,8 +222,8 @@ def main(args):
 if __name__ == "__main__":
     # --- IMPORTANT: UPDATE THESE PATHS ---
     DEFAULT_PASCAL_IMAGE_DIR = r"C:\Users\Khan\PycharmProjects\FSS-Research-\data\pascal\raw\JPEGImages"
-    DEFAULT_PRECOMPUTED_GRAPH_PATH = './precomputed_pascal_graphs_hybrid_v1_main'
-    DEFAULT_PLOT_OUTPUT_DIR = './plot_graphs_precomputation'
+    DEFAULT_PRECOMPUTED_GRAPH_PATH = './precomputed_pascal_graphs_hybrid_v1_main_512'
+    DEFAULT_PLOT_OUTPUT_DIR = './plot_graphs_precomputation_512'
 
     args = SimpleNamespace(
         pascal_image_dir=DEFAULT_PASCAL_IMAGE_DIR,
@@ -237,10 +237,10 @@ if __name__ == "__main__":
 
         # MODE 1: Save visualizations for all samples with IoU BELOW a threshold.
         # Set to a float value (e.g., 0.4) to activate. Set to None to disable.
-        save_below_iou_threshold=0.4,
+        save_below_iou_threshold=None,
 
         # MODE 2: Plot N random samples. Active if `save_below_iou_threshold` is None.
-        plot_random_samples=0,
+        plot_random_samples=10,
 
         # MODE 3: Plot one specific sample. Active if both above are disabled/zero.
         plot_specific_sample_class="chair",
