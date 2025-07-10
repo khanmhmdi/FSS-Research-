@@ -1,0 +1,97 @@
+
+#aeroplane
+2025-07-10 03:53:44,678 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 03:53:52,066 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.7085, Avg IoU: 0.8145 (+/- 0.1987), Node Pos Pred Rate: 26.37%, Skipped Loads: 96
+2025-07-10 03:53:52,066 - INFO - __main__ - Epoch 10 Summary | Time: 17.05s | LR: 4.63e-05 | Train Loss: 0.5845 | Train IoU: 0.7725 | Eval Loss: 0.7085 | Eval IoU: 0.8145
+2025-07-10 03:53:52,084 - INFO - __main__ - *** New best model saved with Eval IoU: 0.8145 to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034937\best_model.pth ***
+2025-07-10 03:53:52,132 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034937\checkpoint_epoch_10.pth
+2025-07-10 03:53:52,132 - INFO - __main__ - ======== Training Finished (00:04:14) ========
+2025-07-10 03:53:52,132 - INFO - __main__ - Best Validation IoU: 0.8145
+2025-07-10 03:53:53,185 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034937\training_history.png
+2025-07-10 03:53:53,185 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 03:53:53,338 - INFO - __main__ - Script finished.
+
+#bicycle
+2025-07-10 03:58:27,427 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 03:58:41,978 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.6259, Avg IoU: 0.3296 (+/- 0.1853), Node Pos Pred Rate: 15.87%, Skipped Loads: 76
+2025-07-10 03:58:41,979 - INFO - __main__ - Epoch 10 Summary | Time: 23.28s | LR: 5.93e-05 | Train Loss: 0.3183 | Train IoU: 0.2893 | Eval Loss: 0.6259 | Eval IoU: 0.3296
+2025-07-10 03:58:41,995 - INFO - __main__ - *** New best model saved with Eval IoU: 0.3296 to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-035436\best_model.pth ***
+2025-07-10 03:58:42,039 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-035436\checkpoint_epoch_10.pth
+2025-07-10 03:58:42,039 - INFO - __main__ - ======== Training Finished (00:04:05) ========
+2025-07-10 03:58:42,039 - INFO - __main__ - Best Validation IoU: 0.3296
+2025-07-10 03:58:42,968 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-035436\training_history.png
+2025-07-10 03:58:42,968 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 03:58:43,146 - INFO - __main__ - Script finished.
+
+# Bird
+2025-07-10 03:47:13,961 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 03:47:25,486 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.9445, Avg IoU: 0.8509 (+/- 0.1248), Node Pos Pred Rate: 15.07%, Skipped Loads: 113
+2025-07-10 03:47:25,486 - INFO - __main__ - Epoch 10 Summary | Time: 22.59s | LR: 5.04e-05 | Train Loss: 0.4377 | Train IoU: 0.8555 | Eval Loss: 0.9445 | Eval IoU: 0.8509
+2025-07-10 03:47:25,501 - INFO - __main__ - *** New best model saved with Eval IoU: 0.8509 to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034256\best_model.pth ***
+2025-07-10 03:47:25,541 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034256\checkpoint_epoch_10.pth
+2025-07-10 03:47:25,541 - INFO - __main__ - ======== Training Finished (00:04:29) ========
+2025-07-10 03:47:25,541 - INFO - __main__ - Best Validation IoU: 0.8509
+2025-07-10 03:47:26,362 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-034256\training_history.png
+2025-07-10 03:47:26,362 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 03:47:26,495 - INFO - __main__ - Script finished.
+
+#boat
+2025-07-10 04:03:03,901 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 04:03:11,273 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.9451, Avg IoU: 0.7461 (+/- 0.2745), Node Pos Pred Rate: 14.44%, Skipped Loads: 68
+2025-07-10 04:03:11,273 - INFO - __main__ - Epoch 10 Summary | Time: 14.25s | LR: 3.43e-05 | Train Loss: 0.3230 | Train IoU: 0.7118 | Eval Loss: 0.9451 | Eval IoU: 0.7461
+2025-07-10 04:03:11,315 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-035920\checkpoint_epoch_10.pth
+2025-07-10 04:03:11,315 - INFO - __main__ - ======== Training Finished (00:03:50) ========
+2025-07-10 04:03:11,315 - INFO - __main__ - Best Validation IoU: 0.7461
+2025-07-10 04:03:12,176 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-035920\training_history.png
+2025-07-10 04:03:12,176 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 04:03:12,311 - INFO - __main__ - Script finished.
+
+#bottle
+2025-07-10 04:06:51,486 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 04:06:57,523 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.8501, Avg IoU: 0.5958 (+/- 0.4232), Node Pos Pred Rate: 7.37%, Skipped Loads: 70
+2025-07-10 04:06:57,523 - INFO - __main__ - Epoch 10 Summary | Time: 13.70s | LR: 4.00e-05 | Train Loss: 0.2074 | Train IoU: 0.7286 | Eval Loss: 0.8501 | Eval IoU: 0.5958
+2025-07-10 04:06:57,563 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-040404\checkpoint_epoch_10.pth
+2025-07-10 04:06:57,563 - INFO - __main__ - ======== Training Finished (00:02:53) ========
+2025-07-10 04:06:57,563 - INFO - __main__ - Best Validation IoU: 0.6055
+2025-07-10 04:06:58,447 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-040404\training_history.png
+2025-07-10 04:06:58,448 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 04:06:58,616 - INFO - __main__ - Script finished.
+
+bus
+2025-07-10 06:47:01,824 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 06:47:19,511 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.9343, Avg IoU: 0.8725 (+/- 0.1781), Node Pos Pred Rate: 14.77%, Skipped Loads: 23
+2025-07-10 06:47:19,512 - INFO - __main__ - Epoch 10 Summary | Time: 32.45s | LR: 3.55e-05 | Train Loss: 0.3145 | Train IoU: 0.9156 | Eval Loss: 0.9343 | Eval IoU: 0.8725
+2025-07-10 06:47:19,525 - INFO - __main__ - *** New best model saved with Eval IoU: 0.8725 to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-063951\best_model.pth ***
+2025-07-10 06:47:19,565 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-063951\checkpoint_epoch_10.pth
+2025-07-10 06:47:19,566 - INFO - __main__ - ======== Training Finished (00:07:27) ========
+2025-07-10 06:47:19,566 - INFO - __main__ - Best Validation IoU: 0.8725
+2025-07-10 06:47:20,414 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-063951\training_history.png
+2025-07-10 06:47:20,414 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 06:47:20,551 - INFO - __main__ - Script finished.
+
+car
+2025-07-10 06:57:52,904 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 06:58:06,576 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.8319, Avg IoU: 0.7791 (+/- 0.2854), Node Pos Pred Rate: 15.98%, Skipped Loads: 28
+2025-07-10 06:58:06,577 - INFO - __main__ - Epoch 10 Summary | Time: 47.71s | LR: 6.77e-05 | Train Loss: 0.3612 | Train IoU: 0.7863 | Eval Loss: 0.8319 | Eval IoU: 0.7791
+2025-07-10 06:58:06,591 - INFO - __main__ - *** New best model saved with Eval IoU: 0.7791 to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-064825\best_model.pth ***
+2025-07-10 06:58:06,633 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-064825\checkpoint_epoch_10.pth
+2025-07-10 06:58:06,633 - INFO - __main__ - ======== Training Finished (00:09:40) ========
+2025-07-10 06:58:06,633 - INFO - __main__ - Best Validation IoU: 0.7791
+2025-07-10 06:58:07,545 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-064825\training_history.png
+2025-07-10 06:58:07,545 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 06:58:07,714 - INFO - __main__ - Script finished.
+
+cat
+Epoch 3/10 Training:   0%|          | 0/220 [00:00<?, ?it/s]2025-07-10 07:03:42,921 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.5684, Avg IoU: 0.8639 (+/- 0.1882), Node Pos Pred Rate: 18.08%, Skipped Loads: 35
+2025-07-10 07:03:42,922 - INFO - __main__ - Epoch 2 Summary | Time: 215.79s | LR: 1.90e-05 | Train Loss: 0.8169 | Train IoU: 0.8365 | Eval Loss: 0.5684 | Eval IoU: 0.8639
+
+chair
+2025-07-10 07:49:57,742 - INFO - __main__ - --- TRIGGERING DEBUG VISUALIZATION (MODE: VISUALIZE_SIGNAL_INTEGRITY) ---
+2025-07-10 07:50:10,299 - INFO - __main__ - Evaluation Finished. Avg Loss: 0.6315, Avg IoU: 0.4625 (+/- 0.3418), Node Pos Pred Rate: 14.54%, Skipped Loads: 35
+2025-07-10 07:50:10,300 - INFO - __main__ - Epoch 10 Summary | Time: 51.24s | LR: 6.99e-05 | Train Loss: 0.3771 | Train IoU: 0.5390 | Eval Loss: 0.6315 | Eval IoU: 0.4625
+2025-07-10 07:50:10,341 - INFO - __main__ - Checkpoint saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-073747\checkpoint_epoch_10.pth
+2025-07-10 07:50:10,341 - INFO - __main__ - ======== Training Finished (00:12:23) ========
+2025-07-10 07:50:10,341 - INFO - __main__ - Best Validation IoU: 0.4690
+2025-07-10 07:50:11,194 - INFO - __main__ - Training history plot saved to train_model_outputs\scr-gt_pascal_PRECOMP_pascal_f0_1shot_256px_knn_iou_dist_area_weighted_prototype_20250710-073747\training_history.png
+2025-07-10 07:50:11,194 - INFO - __main__ - Cleaning up resources for train/eval modes...
+2025-07-10 07:50:11,366 - INFO - __main__ - Script finished.

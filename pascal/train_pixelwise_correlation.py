@@ -158,8 +158,6 @@ class DatasetPASCAL(Dataset):  # User-provided DatasetPASCAL
                 # This is a problematic case for few-shot learning.
                 # For now, let's just pick from general pool if this happens, but log it.
                 # Or, if this is hit, it implies an issue with dataset structure for k-shot.
-                # A robust way might be to re-sample the episode or skip.
-                # For now, assume img_metadata_classwise has enough.
                 # The original DatasetPASCAL code's while loop might get stuck if not enough unique supports.
                 logger.warning(
                     f"Critically low unique support samples for class {class_sample}, query {query_name}. Sampling with replacement from non-query pool.")
@@ -1001,7 +999,7 @@ def precompute_graphs_entrypoint(dataset_adapter, indices, args, feature_extract
     logger.info(f"Graphs skipped (already existed, no overwrite): {skipped_existing_count}")
 
 
-# --- GNN Model Definitions (UPDATED for Prototype Method) ---
+# --- GNN Model Definitions (UPDATED for Pixelwise Correlation Method) ---
 class SupportAwareMaskGNN(nn.Module):
     def __init__(self, base_node_visual_dim, geometric_dim, sam_meta_dim,
                  gnn_hidden_dim, num_gnn_layers, num_heads_gnn, edge_feature_dim,
@@ -1009,8 +1007,9 @@ class SupportAwareMaskGNN(nn.Module):
         super().__init__()
         self.dropout_rate = dropout_rate
 
-        # The input dimension to the GNN now includes the +1 for the cosine similarity score
-        self.input_gnn_dim = base_node_visual_dim + geometric_dim + sam_meta_dim + 1  # +1 for prototype similarity
+        # --- MODIFIED ---
+        # The input dimension to the GNN now includes the +1 for the pixelwise correlation score (max IoU)
+        self.input_gnn_dim = base_node_visual_dim + geometric_dim + sam_meta_dim + 1  # +1 for pixelwise support IoU
         self.input_norm = nn.LayerNorm(self.input_gnn_dim)
 
         self.input_lin = nn.Linear(self.input_gnn_dim, gnn_hidden_dim)
@@ -1044,27 +1043,28 @@ class SupportAwareMaskGNN(nn.Module):
         )
 
         logger.info(
-            f"SupportAwareMaskGNN (Prototype Method) initialized. GNN Input Dim: {self.input_gnn_dim}, GNN Hidden: {gnn_hidden_dim}, GNN Layers: {num_gnn_layers}, Edge Dim: {edge_feature_dim}")
+            f"SupportAwareMaskGNN (Pixelwise Correlation Method) initialized. "
+            f"GNN Input now includes a pixelwise support correlation feature (e.g., max IoU).")
+        logger.info(
+            f"GNN Input Dim: {self.input_gnn_dim}, GNN Hidden: {gnn_hidden_dim}, GNN Layers: {num_gnn_layers}, Edge Dim: {edge_feature_dim}")
 
-    def forward(self, data, support_prototype):
+    def forward(self, data, support_correlation_feature):
         """
         Args:
             data (torch_geometric.data.Batch): A batch of graph data.
-            support_prototype (torch.Tensor): A single prototype vector of shape [1, D] or [D]
-                                              representing the target class, averaged from support features.
+            support_correlation_feature (torch.Tensor): A feature vector of shape [num_nodes, 1]
+                                                        containing the max IoU of each candidate mask
+                                                        with the support set masks.
         """
         x_base, x_geo, x_sam, edge_index, edge_attr = \
             data.x_base, data.x_geo, data.x_sam, \
                 data.edge_index, data.edge_attr
 
-        # 1. Calculate cosine similarity between each node's visual feature and the support prototype.
-        # Add a small epsilon to the prototype for numerical stability in case it's a zero vector.
-        cosine_sim = F.cosine_similarity(x_base, support_prototype.squeeze() + 1e-6, dim=1).unsqueeze(1)
+        # 1. --- MODIFIED ---
+        # The support-aware feature is now passed directly. Concatenate it with other node features.
+        x = torch.cat([x_base, x_geo, x_sam, support_correlation_feature], dim=-1)
 
-        # 2. Concatenate the similarity score as a new feature for each node.
-        x = torch.cat([x_base, x_geo, x_sam, cosine_sim], dim=-1)
-
-        # 3. Proceed with the rest of the GNN as before.
+        # 2. Proceed with the rest of the GNN as before.
         x = self.input_norm(x)
         x = self.input_lin(x)
         x = self.input_act(x)
@@ -1185,7 +1185,7 @@ def estimate_pos_weight(dataset_adapter, indices, precomputed_mask_path, args, d
     return torch.tensor([pos_weight_value], device=device)
 
 
-# --- Training Function (UPDATED for Prototype Method) ---
+# --- Training Function (UPDATED for Pixelwise Correlation Method) ---
 def train_gnn(model, train_loader, optimizer, criterion, device,
               args, feature_extractor,
               scheduler=None):
@@ -1203,7 +1203,8 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
             continue
 
         individual_graphs_to_process = []
-        individual_support_prototypes = []  # <-- CHANGED
+        # --- MODIFIED: This will now hold the calculated pixelwise correlation feature for each graph ---
+        individual_support_correlation_features = []
         individual_original_data_for_iou = []
 
         for item_idx, (support_set, query_set) in enumerate(batch_items):
@@ -1229,30 +1230,25 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
                     skipped_items_load += 1
                     continue
 
-                # --- DYNAMICALLY EXTRACT SUPPORT FEATURES & CREATE PROTOTYPE ---
-                k_shot_support_features_list = []
-                for support_item in support_set:
-                    s_img = support_item['image'].unsqueeze(0)
-                    s_mask = support_item['mask']
-                    if s_mask.sum() < 1e-6: continue  # Skip empty masks
+                # --- NEW: DYNAMICALLY CALCULATE PIXELWISE CORRELATION (MAX IoU) ---
+                candidate_masks_np = graph_data.node_masks_np
+                num_candidates = len(candidate_masks_np)
+                support_masks_np = [s_item['mask'].cpu().numpy().astype(bool) for s_item in support_set]
 
-                    s_fm = feature_extractor.get_feature_map(s_img)
-                    if s_fm is not None:
-                        s_fg_feat = feature_extractor.get_masked_features(s_fm, s_mask.unsqueeze(0))
-                        if s_fg_feat is not None and s_fg_feat.numel() > 0:
-                            k_shot_support_features_list.append(s_fg_feat.squeeze(0))
+                support_correlation_feature = torch.zeros((num_candidates, 1), device=device)
 
-                # --- CREATE PROTOTYPE ---
-                if k_shot_support_features_list:
-                    support_features_tensor = torch.stack(k_shot_support_features_list)
-                    support_prototype = support_features_tensor.mean(dim=0, keepdim=True).to(device)
-                else:
-                    # If no valid support features, use a zero vector prototype
-                    support_prototype = torch.zeros((1, feature_extractor.feature_dim), device=device)
+                if support_masks_np:  # If there are any valid support masks
+                    for i in range(num_candidates):
+                        candidate_mask = candidate_masks_np[i].astype(bool)
+                        # Calculate IoU of this candidate with all support masks
+                        ious_with_support_set = [calculate_iou(candidate_mask, s_mask) for s_mask in support_masks_np]
+                        # The feature is the maximum IoU found
+                        max_iou = max(ious_with_support_set) if ious_with_support_set else 0.0
+                        support_correlation_feature[i, 0] = max_iou
                 # --- END NEW ---
 
                 individual_graphs_to_process.append(graph_data)
-                individual_support_prototypes.append(support_prototype)  # <-- CHANGED
+                individual_support_correlation_features.append(support_correlation_feature)
                 individual_original_data_for_iou.append({
                     'node_masks_np': graph_data.node_masks_np,
                     'gt_mask_np': graph_data.gt_mask_np.astype(bool),
@@ -1266,7 +1262,8 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
         # Process each individual graph from the original batch
         for i in range(len(individual_graphs_to_process)):
             current_graph_data = individual_graphs_to_process[i]
-            current_support_prototype = individual_support_prototypes[i]  # <-- CHANGED
+            # --- MODIFIED: Get the pre-calculated correlation feature ---
+            current_support_feature = individual_support_correlation_features[i]
 
             try:
                 single_graph_batch = Batch.from_data_list([current_graph_data]).to(device)
@@ -1274,8 +1271,8 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
                 optimizer.zero_grad()
                 if single_graph_batch.num_nodes == 0: continue
 
-                # --- UPDATED: Pass support_prototype to the model ---
-                out_logits = model(single_graph_batch, current_support_prototype)
+                # --- UPDATED: Pass the new support correlation feature to the model ---
+                out_logits = model(single_graph_batch, current_support_feature)
                 targets = single_graph_batch.y
 
                 if out_logits.shape[0] != targets.shape[0]:
@@ -1348,9 +1345,9 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
             del single_graph_batch, out_logits, targets, loss
             if 'pred_probs' in locals(): del pred_probs
             if 'pred_labels' in locals(): del pred_labels
-            del current_graph_data, current_support_prototype
+            del current_graph_data, current_support_feature
 
-        del individual_graphs_to_process, individual_support_prototypes, individual_original_data_for_iou
+        del individual_graphs_to_process, individual_support_correlation_features, individual_original_data_for_iou
 
     avg_loss_epoch = total_loss / (processed_graphs if processed_graphs > 0 else 1)
     avg_train_iou_epoch = np.mean(epoch_train_ious) if epoch_train_ious else 0.0
@@ -1361,7 +1358,7 @@ def train_gnn(model, train_loader, optimizer, criterion, device,
     return avg_loss_epoch, avg_train_iou_epoch, avg_grad_norm
 
 
-# --- Evaluation Function (UPDATED for Prototype Method) ---
+# --- Evaluation Function (UPDATED for Pixelwise Correlation Method) ---
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
@@ -1383,7 +1380,7 @@ def evaluate_gnn(model, eval_loader, criterion, device,
             continue
 
         individual_graphs_to_process = []
-        individual_support_prototypes = []
+        individual_support_correlation_features = []
         individual_original_data_for_iou = []
 
         # --- NEW: Data holders for visualization ---
@@ -1410,25 +1407,23 @@ def evaluate_gnn(model, eval_loader, criterion, device,
                     skipped_items_load += 1
                     continue
 
-                k_shot_support_features_list = []
-                for support_item in support_set:
-                    s_img = support_item['image'].unsqueeze(0)
-                    s_mask = support_item['mask']
-                    if s_mask.sum() < 1e-6: continue
-                    s_fm = feature_extractor.get_feature_map(s_img)
-                    if s_fm is not None:
-                        s_fg_feat = feature_extractor.get_masked_features(s_fm, s_mask.unsqueeze(0))
-                        if s_fg_feat is not None and s_fg_feat.numel() > 0:
-                            k_shot_support_features_list.append(s_fg_feat.squeeze(0))
+                # --- NEW: DYNAMICALLY CALCULATE PIXELWISE CORRELATION (MAX IoU) ---
+                candidate_masks_np = graph_data.node_masks_np
+                num_candidates = len(candidate_masks_np)
+                support_masks_np = [s_item['mask'].cpu().numpy().astype(bool) for s_item in support_set]
 
-                if k_shot_support_features_list:
-                    support_features_tensor = torch.stack(k_shot_support_features_list)
-                    support_prototype = support_features_tensor.mean(dim=0, keepdim=True).to(device)
-                else:
-                    support_prototype = torch.zeros((1, feature_extractor.feature_dim), device=device)
+                support_correlation_feature = torch.zeros((num_candidates, 1), device=device)
+
+                if support_masks_np:
+                    for i in range(num_candidates):
+                        candidate_mask = candidate_masks_np[i].astype(bool)
+                        ious_with_support_set = [calculate_iou(candidate_mask, s_mask) for s_mask in support_masks_np]
+                        max_iou = max(ious_with_support_set) if ious_with_support_set else 0.0
+                        support_correlation_feature[i, 0] = max_iou
+                # --- END NEW ---
 
                 individual_graphs_to_process.append(graph_data)
-                individual_support_prototypes.append(support_prototype)
+                individual_support_correlation_features.append(support_correlation_feature)
                 individual_original_data_for_iou.append({
                     'node_masks_np': graph_data.node_masks_np,
                     'gt_mask_np': graph_data.gt_mask_np.astype(bool),
@@ -1437,12 +1432,12 @@ def evaluate_gnn(model, eval_loader, criterion, device,
                     'query_index': graph_data.query_index
                 })
 
-                # --- NEW: Store data needed for visualization ---
+                # --- Store data needed for visualization (using the new feature) ---
                 visualization_data_holder.append({
                     'support_set': support_set,
                     'query_set': query_set,
                     'graph_data': graph_data,
-                    'support_prototype': support_prototype.cpu()  # move to CPU for plotting
+                    'support_correlation_feature': support_correlation_feature.cpu()
                 })
             else:
                 skipped_items_load += 1
@@ -1451,7 +1446,7 @@ def evaluate_gnn(model, eval_loader, criterion, device,
 
         for i in range(len(individual_graphs_to_process)):
             current_graph_data = individual_graphs_to_process[i]
-            current_support_prototype = individual_support_prototypes[i]
+            current_support_feature = individual_support_correlation_features[i]
 
             try:
                 single_graph_batch = Batch.from_data_list([current_graph_data]).to(device)
@@ -1460,35 +1455,33 @@ def evaluate_gnn(model, eval_loader, criterion, device,
                 # =================================================================
                 # --- CHOOSE YOUR DEBUG MODE (uncomment one of the following) ---
                 #
-                # mode = "NORMAL_MODE"
-                mode = "VISUALIZE_SIGNAL_INTEGRITY"
-                # mode = "ABLATION_GNN_BYPASSED"
+                mode = "NORMAL_MODE"
+                # mode = "VISUALIZE_SIGNAL_INTEGRITY" # <-- MODIFIED to use IoU feature
+                # mode = "ABLATION_GNN_BYPASSED"     # <-- MODIFIED to use IoU feature
                 # =================================================================
 
                 out_logits = None
 
                 if mode == "NORMAL_MODE":
-                    out_logits = model(single_graph_batch, current_support_prototype)
+                    out_logits = model(single_graph_batch, current_support_feature)
 
                 elif mode == "ABLATION_GNN_BYPASSED":
-                    if i == 0 and batch_num == 1:  # Log only once
-                        logger.warning("!!! RUNNING IN 'ABLATION_GNN_BYPASSED' MODE. GNN is ignored. !!!")
-                    similarities = F.cosine_similarity(single_graph_batch.x_base,
-                                                       current_support_prototype.squeeze() + 1e-6, dim=1)
-                    out_logits = similarities * 5.0  # Scale similarity to be logit-like
+                    if i == 0 and batch_num == 1:
+                        logger.warning("!!! RUNNING IN 'ABLATION_GNN_BYPASSED' MODE. GNN is ignored, using MAX_IOU directly. !!!")
+                    # Directly use the max IoU score as the logit (scaled)
+                    out_logits = current_support_feature.squeeze() * 10.0  # Scale IoU to be logit-like
 
                 elif mode == "VISUALIZE_SIGNAL_INTEGRITY":
-                    out_logits = model(single_graph_batch, current_support_prototype)  # Still run model normally
+                    out_logits = model(single_graph_batch, current_support_feature)
 
-                    # But if this is the first valid item, trigger visualization
                     if not hasattr(args, 'visualized_once'):
                         logger.info(f"--- TRIGGERING DEBUG VISUALIZATION (MODE: {mode}) ---")
                         vis_data = visualization_data_holder[i]
+                        q_set, s_set, g_data, corr_feat = vis_data['query_set'], vis_data['support_set'], vis_data[
+                            'graph_data'], vis_data['support_correlation_feature']
 
-                        # --- Visualization Logic ---
-                        q_set, s_set, g_data, proto = vis_data['query_set'], vis_data['support_set'], vis_data[
-                            'graph_data'], vis_data['support_prototype']
-                        similarities = F.cosine_similarity(g_data.x_base, proto.squeeze() + 1e-6, dim=1)
+                        # --- MODIFIED: Visualization is now driven by the direct Max IoU signal ---
+                        similarities = corr_feat.squeeze()
                         sorted_indices = torch.argsort(similarities, descending=True)
 
                         q_img_np = (q_set['image_resnet'].cpu().numpy().transpose(1, 2, 0) * [0.229, 0.224, 0.225] + [
@@ -1496,7 +1489,7 @@ def evaluate_gnn(model, eval_loader, criterion, device,
                         q_img_np = np.clip(q_img_np, 0, 1)
 
                         num_to_show = 5
-                        fig, axs = plt.subplots(4, num_to_show + 1, figsize=(20, 16))
+                        fig, axs = plt.subplots(3, num_to_show + 1, figsize=(20, 12))
 
                         axs[0, 0].imshow(q_img_np);
                         axs[0, 0].set_title(f"Query: {q_set['class']}");
@@ -1518,24 +1511,16 @@ def evaluate_gnn(model, eval_loader, criterion, device,
                             axs[1, k + 1].set_title(f"Support Mask {k + 1}");
                             axs[1, k + 1].axis('off')
 
-                        axs[2, 0].text(0.5, 0.5, 'Top-5 Similar\nCandidates', ha='center', va='center', fontsize=12);
+                        axs[2, 0].text(0.5, 0.5, 'Top-5 Candidates\nby Max IoU', ha='center', va='center', fontsize=12);
                         axs[2, 0].axis('off')
                         for k in range(min(num_to_show, len(sorted_indices))):
                             idx = sorted_indices[k]
                             axs[2, k + 1].imshow(g_data.node_masks_np[idx], cmap='gray');
-                            axs[2, k + 1].set_title(f"Sim: {similarities[idx].item():.3f}");
+                            axs[2, k + 1].set_title(f"Max IoU: {similarities[idx].item():.3f}");
                             axs[2, k + 1].axis('off')
 
-                        axs[3, 0].text(0.5, 0.5, 'Bottom-5 Similar\nCandidates', ha='center', va='center', fontsize=12);
-                        axs[3, 0].axis('off')
-                        for k in range(min(num_to_show, len(sorted_indices))):
-                            idx = sorted_indices[-(k + 1)]
-                            axs[3, k + 1].imshow(g_data.node_masks_np[idx], cmap='gray');
-                            axs[3, k + 1].set_title(f"Sim: {similarities[idx].item():.3f}");
-                            axs[3, k + 1].axis('off')
-
                         plt.tight_layout();
-                        plt.suptitle(f"Debug Viz - Query: {q_set['query_index']}", fontsize=16);
+                        plt.suptitle(f"Debug Viz (Max IoU Signal) - Query: {q_set['query_index']}", fontsize=16);
                         plt.show()
                         args.visualized_once = True
                         # --- End Visualization ---
@@ -1590,9 +1575,9 @@ def evaluate_gnn(model, eval_loader, criterion, device,
 
             del single_graph_batch, out_logits, targets, pred_probs, pred_labels_nodes
             if 'loss_val' in locals() and loss_val is not None: del loss_val
-            del current_graph_data, current_support_prototype
+            del current_graph_data, current_support_feature
 
-        del individual_graphs_to_process, individual_support_prototypes, individual_original_data_for_iou, visualization_data_holder
+        del individual_graphs_to_process, individual_support_correlation_features, individual_original_data_for_iou, visualization_data_holder
 
     # Reset visualization flag for the next epoch's evaluation
     if hasattr(args, 'visualized_once'):
@@ -1606,6 +1591,7 @@ def evaluate_gnn(model, eval_loader, criterion, device,
     logger.info(
         f"Evaluation Finished. Avg Loss: {avg_loss_epoch:.4f}, Avg IoU: {avg_iou:.4f} (+/- {std_iou:.4f}), Node Pos Pred Rate: {pos_pred_rate_nodes:.2%}, Skipped Loads: {skipped_items_load}")
     return avg_loss_epoch, avg_iou
+
 
 # --- Main Script ---
 def main(args):
@@ -1630,8 +1616,9 @@ def main(args):
     logger.info(f"Effective edge_feature_mode: '{args.edge_feature_mode}', edge_feature_dim: {args.edge_feature_dim}")
 
     feature_extractor = None
-    if args.mode == 'precompute_graphs' or args.mode == 'train' or args.mode == 'eval':
-        logger.info("Initializing FeatureExtractor...")
+    # Feature extractor is now only needed for precomputation. It is NOT used during training/eval loops.
+    if args.mode == 'precompute_graphs':
+        logger.info("Initializing FeatureExtractor for precomputation...")
         try:
             if not os.path.isdir(args.pascal_datapath): raise FileNotFoundError(
                 f"PASCAL datapath missing: {args.pascal_datapath}")
@@ -1642,7 +1629,7 @@ def main(args):
             logger.critical(f"Failed to initialize FeatureExtractor: {e}", exc_info=True);
             return
     else:
-        logger.info(f"Mode: {args.mode}. FeatureExtractor will not be initialized.")
+        logger.info(f"Mode: {args.mode}. FeatureExtractor will not be initialized for train/eval.")
         if not os.path.isdir(args.pascal_datapath): raise FileNotFoundError(
             f"PASCAL datapath missing: {args.pascal_datapath}")
         if not os.path.isdir(args.precomputed_graph_path): raise FileNotFoundError(
@@ -1805,8 +1792,6 @@ def main(args):
     logger.info("Initializing GNN model...")
     model, optimizer, scheduler = None, None, None
     try:
-        # --- UPDATED: Model initialization reflects prototype method ---
-        # Note: spt_attn_* parameters are no longer needed for this model version.
         model = SupportAwareMaskGNN(
             base_node_visual_dim=args.feature_size,
             geometric_dim=4,
@@ -1819,7 +1804,7 @@ def main(args):
         ).to(device)
         total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         logger.info(
-            f"SupportAwareMaskGNN (Prototype Method) initialized. Params: {total_params:,}. On device: {device}")
+            f"SupportAwareMaskGNN (Pixelwise Corr Method) initialized. Params: {total_params:,}. On device: {device}")
     except Exception as e:
         logger.critical(f"Failed to initialize GNN model: {e}", exc_info=True);
         return
@@ -1842,7 +1827,8 @@ def main(args):
     timestamp = time.strftime('%Y%m%d-%H%M%S')
     run_name_suffix = f"pascal_f{args.pascal_fold}_{args.k_shot}shot_{args.img_size}px_{args.graph_connectivity}_{args.edge_feature_mode}"
     if args.use_loss_weighting: run_name_suffix += "_weighted"
-    run_name_suffix += f"_prototype_{timestamp}"  # <-- Added 'prototype' to run name
+    # --- MODIFIED: Update run name to reflect the new method ---
+    run_name_suffix += f"_pixelcorr_{timestamp}"
     run_name = f"scr-gt_pascal_PRECOMP_{run_name_suffix}"
 
     model_save_dir = Path(args.output_dir) / run_name
@@ -2041,7 +2027,6 @@ if __name__ == "__main__":
         gnn_layers=4,
         gnn_heads=4,
         dropout=0.3,
-        # spt_attn_* args are no longer used by the new model, but we can leave them
         spt_attn_num_heads=4,
         spt_attn_output_dim=128,
 
