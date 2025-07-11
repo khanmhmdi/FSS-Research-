@@ -1010,7 +1010,9 @@ class SupportAwareMaskGNN(nn.Module):
         self.dropout_rate = dropout_rate
 
         # The input dimension to the GNN now includes the +1 for the cosine similarity score
-        self.input_gnn_dim = base_node_visual_dim + geometric_dim + sam_meta_dim + 1  # +1 for prototype similarity
+        # self.input_gnn_dim = base_node_visual_dim + geometric_dim + sam_meta_dim + 1  # +1 for prototype similarity
+        self.input_gnn_dim =  base_node_visual_dim  # +1 for prototype similarity
+
         self.input_norm = nn.LayerNorm(self.input_gnn_dim)
 
         self.input_lin = nn.Linear(self.input_gnn_dim, gnn_hidden_dim)
@@ -1062,7 +1064,7 @@ class SupportAwareMaskGNN(nn.Module):
         cosine_sim = F.cosine_similarity(x_base, support_prototype.squeeze() + 1e-6, dim=1).unsqueeze(1)
 
         # 2. Concatenate the similarity score as a new feature for each node.
-        x = torch.cat([x_base, x_geo, x_sam, cosine_sim], dim=-1)
+        x = torch.cat([x_base], dim=-1)
 
         # 3. Proceed with the rest of the GNN as before.
         x = self.input_norm(x)
